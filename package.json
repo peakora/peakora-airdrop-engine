@@ -1,0 +1,15 @@
+{
+  "name": "peakora-airdrop-engine",
+  "version": "1.0.0",
+  "description": "Laptop-based automation engine for farming high-probability crypto airdrops across L2 ecosystems.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "ethers": "^6.0.0",
+    "dotenv": "^16.0.0",
+    "winston": "^3.8.2",
+    "express": "^4.18.2"
+  }
+}
