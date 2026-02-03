@@ -1,37 +1,26 @@
+const { runLayer3Quest } = require("./quests");
 const logger = require("../logger/logger");
-const { transferETH } = require("../tasks/task");
-const { loadWallet } = require("../wallets/wallet");
 
-// Example placeholder for task sources
-const taskSources = [
-  { name: "Layer3", url: "https://layer3.xyz/quests" },
-  { name: "Galxe", url: "https://galxe.com/" },
-  { name: "Zealy", url: "https://zealy.io/" }
-];
-
-// Simulated reward collector
+/**
+ * Collect rewards from supported quest platforms
+ * @param {string} walletKey - The environment variable key for the wallet
+ */
 async function collectRewards(walletKey) {
-  const wallet = loadWallet(walletKey);
+  try {
+    const walletAddress = process.env[walletKey + "_ADDRESS"];
+    if (!walletAddress) {
+      logger.error(`No wallet address found for key: ${walletKey}`);
+      return;
+    }
 
-  // Placeholder: simulate reward claim
-  const rewardAmount = 0.001; // ETH equivalent
-  logger.info(`Collected ${rewardAmount} ETH worth of rewards for ${wallet.address}`);
+    logger.info(`Starting reward collection for wallet: ${walletAddress}`);
 
-  // Distribute fuel if balance is low
-  await distributeFuel(wallet, rewardAmount);
-}
+    // Example: run Layer3 quest automation
+    await runLayer3Quest(walletAddress);
 
-async function distributeFuel(wallet, rewardAmount) {
-  // Example: send ETH to another wallet if balance < threshold
-  const threshold = 0.001;
-  const balance = await wallet.provider.getBalance(wallet.address);
-
-  if (balance < ethers.parseEther(threshold.toString())) {
-    const targetAddress = process.env.WALLET_KEY_2_ADDRESS;
-    const txHash = await transferETH(process.env.WALLET_KEY_1, targetAddress, rewardAmount);
-    logger.info(`Fuel distributed: ${rewardAmount} ETH → ${targetAddress}, TX: ${txHash}`);
-  } else {
-    logger.info(`Wallet ${wallet.address} has sufficient fuel: ${balance.toString()} wei`);
+    logger.info(`Reward collection finished for wallet: ${walletAddress}`);
+  } catch (err) {
+    logger.error(`Reward collection failed: ${err.message}`);
   }
 }
 
