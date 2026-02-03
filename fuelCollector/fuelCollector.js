@@ -1,4 +1,6 @@
 const { runLayer3Quest } = require("./quests");
+const { runGalxeQuest } = require("./galxe");
+const { runZealyQuest } = require("./zealy");
 const logger = require("../logger/logger");
 
 /**
@@ -15,8 +17,14 @@ async function collectRewards(walletKey) {
 
     logger.info(`Starting reward collection for wallet: ${walletAddress}`);
 
-    // Example: run Layer3 quest automation
+    // Run Layer3 quest automation
     await runLayer3Quest(walletAddress);
+
+    // Run Galxe quest automation
+    await runGalxeQuest(walletAddress);
+
+    // Run Zealy quest automation
+    await runZealyQuest(walletAddress);
 
     logger.info(`Reward collection finished for wallet: ${walletAddress}`);
   } catch (err) {
