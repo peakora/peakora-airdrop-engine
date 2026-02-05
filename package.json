@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node ./index.js",
     "gen-env-example": "node ./scripts/generate-env-example.js",
-
+ 
     "fuel": "node ./fuelCollector/fuelCollector.js",
     "galxe": "node ./fuelCollector/galxe.js",
     "zealy": "node ./fuelCollector/zealy.js",
