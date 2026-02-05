@@ -1,8 +1,9 @@
 require("dotenv").config();
+const { ethers } = require("ethers");
+const { transferETH } = require("../tasks/task");
+const { loadWallet, checkBalance } = require("../wallets/wallet");
 
 console.log("Scheduler started...");
-
-const { transferETH } = require("../tasks/task");
 
 function scheduleTask(taskFn, args, delayMs) {
   setTimeout(async () => {
@@ -15,8 +16,7 @@ function scheduleTask(taskFn, args, delayMs) {
   }, delayMs);
 }
 
-function staggerTransfers() {
-  // Validate required environment variables
+async function staggerTransfers() {
   const requiredKeys = [
     "WALLET_KEY_1",
     "WALLET_KEY_2",
@@ -32,15 +32,26 @@ function staggerTransfers() {
     return;
   }
 
-  // Schedule transfers
-  scheduleTask(transferETH, ["WALLET_KEY_1", process.env.WALLET_KEY_2_ADDRESS, 0.001], 1000);
-  scheduleTask(transferETH, ["WALLET_KEY_2", process.env.WALLET_KEY_3_ADDRESS, 0.001], 5000);
-  scheduleTask(transferETH, ["WALLET_KEY_3", process.env.WALLET_KEY_1_ADDRESS, 0.001], 10000);
+  // Check balances before scheduling
+  const wallets = [
+    { key: "WALLET_KEY_1", to: process.env.WALLET_KEY_2_ADDRESS, amount: 0.001, delay: 1000 },
+    { key: "WALLET_KEY_2", to: process.env.WALLET_KEY_3_ADDRESS, amount: 0.001, delay: 5000 },
+    { key: "WALLET_KEY_3", to: process.env.WALLET_KEY_1_ADDRESS, amount: 0.001, delay: 10000 }
+  ];
+
+  for (const { key, to, amount, delay } of wallets) {
+    const wallet = loadWallet(key);
+    const balance = await checkBalance(wallet);
+
+    if (balance < ethers.parseEther(amount.toString())) {
+      console.error(`Skipping transfer: Wallet ${wallet.address} has insufficient funds.`);
+      continue;
+    }
+
+    scheduleTask(transferETH, [key, to, amount], delay);
+  }
 }
 
-// Run immediately when scheduler starts
-staggerTransfers();
+module.exports = { scheduleTask, staggerTransfers };
 
 console.log("Scheduler finished.");
-
-module.exports = { scheduleTask, staggerTransfers };
