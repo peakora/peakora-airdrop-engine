@@ -14,14 +14,18 @@
     "test-fuel": "node fuelCollector/testFuel.js",
     "farm": "npm run fuel && npm run galxe && npm run zealy && npm run quests",
 
-    "scheduler": "node scheduler/index.js",
-    "tasks": "node tasks/runAll.js",
+    "scheduler": "node scheduler/scheduler.js",
+    "test-scheduler": "node scheduler/testScheduler.js",
+
+    "tasks": "node scripts/tasks/task.js",
+    "test-tasks": "node scripts/tasks/testTask.js",
     "airdrop": "npm run scheduler && npm run tasks",
 
     "logs": "node logger/viewLogs.js",
     "clear-logs": "rm -rf logs/*",
 
-    "dashboard": "node dashboard/testDashboard.js"
+    "dashboard": "node dashboard/testDashboard.js",
+    "central-station": "node centralStation/index.js"
   },
   "keywords": [
     "airdrop",
