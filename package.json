@@ -1,7 +1,7 @@
 {
   "name": "peakora-airdrop-engine",
   "version": "1.0.0",
-  "description": "Automation engine for collecting fuel and farming high-probability crypto airdrops across Layer2 ecosystems with logging and dashboard monitoring.",
+  "description": "Automation engine for collecting fuel and farming crypto airdrops with logging and dashboard monitoring.",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
