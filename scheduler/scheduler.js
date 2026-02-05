@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 console.log("Scheduler started...");
 
 const { transferETH } = require("../tasks/task");
