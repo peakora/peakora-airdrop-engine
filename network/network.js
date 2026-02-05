@@ -1,3 +1,5 @@
+console.log("RPC_URLS from env:", process.env.RPC_URLS);
+
 const { ethers } = require("ethers");
 
 function getProvider() {
