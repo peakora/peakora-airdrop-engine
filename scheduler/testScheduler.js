@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const { staggerTransfers } = require("./scheduler");
 
 async function main() {
