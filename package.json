@@ -1,7 +1,7 @@
 {
   "name": "peakora-airdrop-engine",
   "version": "1.0.0",
-  "description": "Automation engine for collecting fuel and farming high-probability crypto airdrops across Layer2 ecosystems.",
+  "description": "Automation engine for collecting fuel and farming high-probability crypto airdrops across Layer2 ecosystems with logging and dashboard monitoring.",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -12,12 +12,16 @@
     "zealy": "node fuelCollector/zealy.js",
     "quests": "node fuelCollector/quests.js",
     "test-fuel": "node fuelCollector/testFuel.js",
-
     "farm": "npm run fuel && npm run galxe && npm run zealy && npm run quests",
 
     "scheduler": "node scheduler/index.js",
     "tasks": "node tasks/runAll.js",
-    "airdrop": "npm run scheduler && npm run tasks"
+    "airdrop": "npm run scheduler && npm run tasks",
+
+    "logs": "node logger/viewLogs.js",
+    "clear-logs": "rm -rf logs/*",
+
+    "dashboard": "node dashboard/testDashboard.js"
   },
   "keywords": [
     "airdrop",
@@ -27,6 +31,9 @@
     "fuelCollector",
     "scheduler",
     "tasks",
+    "logger",
+    "dashboard",
+    "monitoring",
     "peakora"
   ],
   "author": "Peakora Team",
@@ -37,7 +44,9 @@
     "ethers": "^6.11.1",
     "web3": "^4.2.0",
     "node-schedule": "^2.1.1",
-    "winston": "^3.10.0"
+    "winston": "^3.10.0",
+    "fs-extra": "^11.2.0",
+    "express": "^4.19.2"
   },
   "devDependencies": {
     "eslint": "^8.56.0",
