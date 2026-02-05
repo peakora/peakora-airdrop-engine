@@ -1,17 +1,23 @@
 {
   "name": "peakora-airdrop-engine",
   "version": "1.0.0",
-  "description": "Laptop-based automation engine for farming high-probability crypto airdrops across L2 ecosystems.",
+  "description": "Automation engine for collecting fuel and farming high-probability crypto airdrops across Layer2 ecosystems.",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
     "gen-env-example": "node scripts/generate-env-example.js",
+
     "fuel": "node fuelCollector/fuelCollector.js",
     "galxe": "node fuelCollector/galxe.js",
     "zealy": "node fuelCollector/zealy.js",
     "quests": "node fuelCollector/quests.js",
+    "test-fuel": "node fuelCollector/testFuel.js",
+
     "farm": "npm run fuel && npm run galxe && npm run zealy && npm run quests",
-    "test-fuel": "node fuelCollector/testFuel.js"
+
+    "scheduler": "node scheduler/index.js",
+    "tasks": "node tasks/runAll.js",
+    "airdrop": "npm run scheduler && npm run tasks"
   },
   "keywords": [
     "airdrop",
@@ -19,6 +25,8 @@
     "crypto",
     "layer2",
     "fuelCollector",
+    "scheduler",
+    "tasks",
     "peakora"
   ],
   "author": "Peakora Team",
