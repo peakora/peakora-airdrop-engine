@@ -1,4 +1,4 @@
-const { showDashboard } = require("./dashboard");
+const { showDashboard } = require("./index");
 
 async function main() {
   await showDashboard();
