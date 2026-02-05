@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Peakora Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h1 { color: #2c3e50; }
+    .chart-container { width: 600px; margin-top: 30px; }
+  </style>
+</head>
+<body>
+  <h1>Peakora Airdrop Engine Dashboard</h1>
+  <p>Fuel collection and farming runs are active. Logs update every cycle.</p>
+
+  <div class="chart-container">
+    <canvas id="runChart"></canvas>
+  </div>
+
+  <script>
+    async function loadData() {
+      const res = await fetch('/logs');
+      const files = await res.json();
+      const labels = files.map(f => f.replace('.log',''));
+      const data = files.map(() => Math.floor(Math.random() * 10)); // placeholder counts
+
+      new Chart(document.getElementById('runChart'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Runs per module',
+            data,
+            backgroundColor: '#3498db'
+          }]
+        }
+      });
+    }
+    loadData();
+  </script>
+</body>
+</html>
