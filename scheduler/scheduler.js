@@ -1,3 +1,5 @@
+console.log("Scheduler started...");
+
 const { transferETH } = require("../tasks/task");
 
 // Run a task with delay
@@ -20,3 +22,4 @@ function staggerTransfers() {
 }
 
 module.exports = { scheduleTask, staggerTransfers };
+console.log("Scheduler finished.");
