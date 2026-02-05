@@ -1,11 +1,11 @@
 name: Generate .env.example
 
 on:
-  workflow_dispatch:        # allow manual runs from Actions tab
+  workflow_dispatch:
   push:
-    branches: [ main ]      # run on pushes to main
+    branches: [ main ]
   schedule:
-    - cron: '0 */6 * * *'   # run every 6 hours
+    - cron: '0 */6 * * *'   # every 6 hours
 
 permissions:
   contents: write
@@ -43,23 +43,8 @@ jobs:
           node-version: '18'
           cache: 'npm'
 
-      - name: Detect package manager and install dependencies
-        shell: bash
-        run: |
-          set -e
-          if [ -f pnpm-lock.yaml ]; then
-            echo "pnpm lockfile detected. Using pnpm"
-            corepack enable
-            corepack prepare pnpm@latest --activate
-            pnpm ci
-          elif [ -f yarn.lock ]; then
-            echo "yarn.lock detected. Using yarn"
-            npm install -g yarn
-            yarn install --frozen-lockfile
-          else
-            echo "No pnpm/yarn lockfile detected. Using npm"
-            npm ci
-          fi
+      - name: Install dependencies
+        run: npm ci
 
       - name: Run generator
         run: npm run gen-env-example
