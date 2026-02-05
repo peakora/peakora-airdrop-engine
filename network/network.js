@@ -6,6 +6,7 @@ function getProvider() {
   if (urls.length === 0) {
     throw new Error("No RPC_URLS defined in .env");
   }
+
   const url = urls[0].trim();
   console.log("Using RPC provider:", url);
   return new ethers.JsonRpcProvider(url);
