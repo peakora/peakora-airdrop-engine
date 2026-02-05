@@ -1,5 +1,5 @@
 name: Generate .env.example
-
+ 
 on:
   workflow_dispatch:
   push:
