@@ -62,7 +62,7 @@ jobs:
           fi
 
       - name: Run generator
-        run: node scripts/generate-env-example.js
+        run: npm run gen-env-example
 
       - name: Verify .env.example exists
         run: |
