@@ -5,14 +5,34 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "gen-env-example": "node scripts/generate-env-example.js"
+    "gen-env-example": "node scripts/generate-env-example.js",
+    "fuel": "node fuelCollector/fuelCollector.js",
+    "galxe": "node fuelCollector/galxe.js",
+    "zealy": "node fuelCollector/zealy.js",
+    "quests": "node fuelCollector/quests.js",
+    "farm": "npm run fuel && npm run galxe && npm run zealy && npm run quests",
+    "test-fuel": "node fuelCollector/testFuel.js"
   },
+  "keywords": [
+    "airdrop",
+    "automation",
+    "crypto",
+    "layer2",
+    "fuelCollector",
+    "peakora"
+  ],
+  "author": "Peakora Team",
+  "license": "MIT",
   "dependencies": {
-    "ethers": "^6.0.0",
-    "dotenv": "^16.0.0",
-    "winston": "^3.10.0",
-    "express": "^4.18.2",
-    "puppeteer": "^22.0.0"
+    "dotenv": "^16.3.1",
+    "axios": "^1.6.7",
+    "ethers": "^6.11.1",
+    "web3": "^4.2.0",
+    "node-schedule": "^2.1.1",
+    "winston": "^3.10.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.56.0",
+    "prettier": "^3.2.5"
   }
 }
-
