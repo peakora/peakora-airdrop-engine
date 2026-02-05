@@ -1,11 +1,11 @@
 name: Generate .env.example
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:        # allow manual runs from Actions tab
   push:
-    branches: [ main ]
+    branches: [ main ]      # run on pushes to main
   schedule:
-    - cron: '0 */6 * * *' # every 6 hours
+    - cron: '0 */6 * * *'   # run every 6 hours
 
 permissions:
   contents: write
@@ -29,7 +29,6 @@ jobs:
           CHROME_PROFILE_PATH=${{ secrets.REAL_CHROME_PROFILE_PATH }}
           PRIMARY_ADDRESS=${{ secrets.REAL_PRIMARY_ADDRESS }}
           PRIVATE_KEY_PRIMARY=${{ secrets.REAL_PRIVATE_KEY_PRIMARY }}
-          PRIVATE_KEY_NODE=${{ secrets.REAL_PRIVATE_KEY_NODE }}
           DISTRIBUTION_ADDRESSES=${{ secrets.REAL_DISTRIBUTION_ADDRESSES }}
           ONEINCH_API=${{ secrets.REAL_ONEINCH_API }}
           DISTRIBUTION_THRESHOLD_ETH=${{ secrets.REAL_DISTRIBUTION_THRESHOLD_ETH }}
@@ -49,17 +48,16 @@ jobs:
         run: |
           set -e
           if [ -f pnpm-lock.yaml ]; then
-            echo "pnpm lockfile detected. Enabling corepack and running pnpm ci"
+            echo "pnpm lockfile detected. Using pnpm"
             corepack enable
             corepack prepare pnpm@latest --activate
-            pnpm -v
             pnpm ci
           elif [ -f yarn.lock ]; then
-            echo "yarn.lock detected. Installing dependencies with yarn"
+            echo "yarn.lock detected. Using yarn"
             npm install -g yarn
             yarn install --frozen-lockfile
           else
-            echo "No pnpm/yarn lockfile detected. Using npm ci"
+            echo "No pnpm/yarn lockfile detected. Using npm"
             npm ci
           fi
 
@@ -85,6 +83,4 @@ jobs:
 
       - name: Cleanup temporary .env
         if: always()
-        run: |
-          # remove temporary .env created from secrets
-          rm -f .env || true
+        run: rm -f .env || true
