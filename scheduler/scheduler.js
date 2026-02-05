@@ -14,15 +14,23 @@ function scheduleTask(taskFn, args, delayMs) {
 }
 
 function staggerTransfers() {
-  if (!process.env.WALLET_KEY_1 || !process.env.WALLET_KEY_2 || !process.env.WALLET_KEY_3) {
-    console.error("Missing wallet private keys in .env (WALLET_KEY_1, WALLET_KEY_2, WALLET_KEY_3).");
-    return;
-  }
-  if (!process.env.WALLET_KEY_2_ADDRESS || !process.env.WALLET_KEY_3_ADDRESS || !process.env.WALLET_KEY_1_ADDRESS) {
-    console.error("Missing wallet addresses in .env (WALLET_KEY_1_ADDRESS, WALLET_KEY_2_ADDRESS, WALLET_KEY_3_ADDRESS).");
+  // Validate required environment variables
+  const requiredKeys = [
+    "WALLET_KEY_1",
+    "WALLET_KEY_2",
+    "WALLET_KEY_3",
+    "WALLET_KEY_1_ADDRESS",
+    "WALLET_KEY_2_ADDRESS",
+    "WALLET_KEY_3_ADDRESS"
+  ];
+
+  const missing = requiredKeys.filter(k => !process.env[k]);
+  if (missing.length > 0) {
+    console.error("Missing environment variables:", missing.join(", "));
     return;
   }
 
+  // Schedule transfers
   scheduleTask(transferETH, ["WALLET_KEY_1", process.env.WALLET_KEY_2_ADDRESS, 0.001], 1000);
   scheduleTask(transferETH, ["WALLET_KEY_2", process.env.WALLET_KEY_3_ADDRESS, 0.001], 5000);
   scheduleTask(transferETH, ["WALLET_KEY_3", process.env.WALLET_KEY_1_ADDRESS, 0.001], 10000);
@@ -32,4 +40,5 @@ function staggerTransfers() {
 staggerTransfers();
 
 console.log("Scheduler finished.");
+
 module.exports = { scheduleTask, staggerTransfers };
