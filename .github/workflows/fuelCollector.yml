@@ -1,0 +1,45 @@
+name: Fuel Collector
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */6 * * *'   # every 6 hours
+
+permissions:
+  contents: write
+
+jobs:
+  fuel-collector:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create .env from secrets (temporary, not committed)
+        shell: bash
+        run: |
+          cat > .env <<'EOF'
+          RPC_URLS=${{ secrets.REAL_RPC_URLS }}
+          CHAIN_ID=${{ secrets.REAL_CHAIN_ID }}
+          PRIMARY_ADDRESS=${{ secrets.REAL_PRIMARY_ADDRESS }}
+          PRIVATE_KEY_PRIMARY=${{ secrets.REAL_PRIVATE_KEY_PRIMARY }}
+          DISTRIBUTION_ADDRESSES=${{ secrets.REAL_DISTRIBUTION_ADDRESSES }}
+          EOF
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run fuelCollector
+        run: node automation/fuelCollector.js
+
+      - name: Cleanup temporary .env
+        if: always()
+        run: rm -f .env || true
