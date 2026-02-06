@@ -1,69 +1,84 @@
-const puppeteer = require("puppeteer");
+// fuelCollector/galxe.js
+// Full-featured Galxe adapter for the fuelCollector.
+// This module exposes a single function `runGalxe` that wraps the lower-level
+// quest automation and adds retries, timeouts, and structured logging.
+
 const logger = require("../logger/logger");
+const { runGalxeQuest } = require("./quests");
 
 /**
- * Automates Galxe campaign flow:
- * - Opens Galxe site
- * - Connects wallet (simulated)
- * - Opens a campaign
- * - Completes task (placeholder)
- * - Claims reward (NFT or token)
+ * Run Galxe collection with retries and optional dry-run.
+ * @param {string} walletAddress - 0x... address to use
+ * @param {object} opts - options: { retries, retryDelayMs, timeoutMs, dryRun }
+ * @returns {Promise<object>} result object { ok, claimed, attempts, error }
  */
-async function runGalxeQuest(walletAddress) {
-  logger.info(`Starting Galxe quest automation for ${walletAddress}`);
+async function runGalxe(walletAddress, opts = {}) {
+  const retries = Number(opts.retries ?? 2);
+  const retryDelayMs = Number(opts.retryDelayMs ?? 2000);
+  const timeoutMs = Number(opts.timeoutMs ?? 60_000);
+  const dryRun = !!opts.dryRun;
 
-  const browser = await puppeteer.launch({
-    headless: true, // set to false if you want to see the browser
-    defaultViewport: null,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"]
-  });
-
-  const page = await browser.newPage();
-
-  try {
-    // Navigate to Galxe campaigns
-    await page.goto("https://galxe.com/", { waitUntil: "networkidle2" });
-    logger.info("Navigated to Galxe homepage");
-
-    // Example: simulate wallet connect
-    const connectButton = "button[data-testid='connect-wallet']";
-    if (await page.$(connectButton)) {
-      await page.click(connectButton);
-      logger.info("Clicked connect wallet button");
-      await page.waitForTimeout(3000);
-    } else {
-      logger.warn("Connect wallet button not found");
-    }
-
-    // Example: click on first campaign
-    const campaignLink = "a[href*='/campaign/']";
-    if (await page.$(campaignLink)) {
-      await page.click(campaignLink);
-      logger.info("Opened a campaign");
-      await page.waitForTimeout(5000);
-    } else {
-      logger.warn("No campaign link found");
-    }
-
-    // Simulate completing campaign task
-    logger.info("Campaign task completion simulated (replace with real logic)");
-
-    // Example: claim reward
-    const claimButton = "button[data-testid='claim-reward']";
-    if (await page.$(claimButton)) {
-      await page.click(claimButton);
-      logger.info("Clicked claim reward button");
-      await page.waitForTimeout(3000);
-    } else {
-      logger.warn("Claim reward button not found");
-    }
-
-    logger.info(`Galxe quest automation finished for ${walletAddress}`);
-  } catch (err) {
-    logger.error(`Galxe quest automation failed: ${err.message}`);
-  } finally {
-    await browser.close();
+  if (!walletAddress || typeof walletAddress !== "string" || !walletAddress.startsWith("0x")) {
+    const err = new Error("Invalid walletAddress passed to runGalxe");
+    logger.error(err.message, { walletAddress });
+    return { ok: false, error: err.message };
   }
+
+  logger.info("runGalxe: starting", { wallet: walletAddress, retries, dryRun });
+
+  if (dryRun) {
+    logger.info("runGalxe: dryRun enabled — skipping browser automation");
+    return { ok: true, claimed: false, dryRun: true };
+  }
+
+  let attempt = 0;
+  let lastError = null;
+
+  while (attempt <= retries) {
+    attempt += 1;
+    logger.info("runGalxe: attempt", { attempt, wallet: walletAddress });
+
+    try {
+      // enforce a per-attempt timeout
+      const resultPromise = runGalxeQuest(walletAddress, { attempt });
+      const result = await promiseWithTimeout(resultPromise, timeoutMs, `Galxe attempt ${attempt} timed out`);
+      // normalize result
+      if (result && result.ok) {
+        logger.info("runGalxe: success", { wallet: walletAddress, attempt, result });
+        return { ok: true, claimed: !!result.claimed, attempts: attempt, details: result };
+      }
+      // if result.ok is false but no exception, treat as retryable
+      lastError = result && result.error ? result.error : "unknown_failure";
+      logger.warn("runGalxe: attempt returned non-ok", { attempt, lastError });
+    } catch (err) {
+      lastError = err && err.message ? err.message : String(err);
+      logger.error("runGalxe: attempt threw", { attempt, error: lastError });
+    }
+
+    if (attempt <= retries) {
+      logger.info("runGalxe: retrying after delay", { attempt, delayMs: retryDelayMs });
+      await sleep(retryDelayMs);
+    }
+  }
+
+  logger.error("runGalxe: all attempts failed", { wallet: walletAddress, attempts: attempt, lastError });
+  return { ok: false, error: lastError, attempts: attempt };
 }
 
-module.exports = { runGalxeQuest };
+/* Helpers */
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function promiseWithTimeout(promise, ms, timeoutMessage) {
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(timeoutMessage)), ms);
+    })
+  ]).finally(() => clearTimeout(timer));
+}
+
+module.exports = { runGalxe };
