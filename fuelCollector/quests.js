@@ -1,69 +1,117 @@
-const puppeteer = require("puppeteer");
-const logger = require("../logger/logger");
+// fuelCollector/quests.js
+const puppeteer = require('puppeteer');
+const logger = require('../logger/logger');
 
-/**
- * Automates Layer3 quest flow:
- * - Opens Layer3 site
- * - Connects wallet (simulated)
- * - Opens a quest
- * - Completes quest (placeholder)
- * - Claims reward
- */
-async function runLayer3Quest(walletAddress) {
-  logger.info(`Starting Layer3 quest automation for ${walletAddress}`);
+const DEFAULT_PUPPETEER_ARGS = [
+  '--no-sandbox',
+  '--disable-setuid-sandbox',
+  '--disable-dev-shm-usage',
+  '--disable-gpu',
+  '--single-process',
+  '--no-zygote'
+];
 
-  const browser = await puppeteer.launch({
-    headless: true, // set to false if you want to see the browser
-    defaultViewport: null,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"]
-  });
+async function launchBrowser() {
+  const launchOptions = {
+    headless: process.env.PUPPETEER_HEADLESS !== 'false',
+    args: DEFAULT_PUPPETEER_ARGS,
+    // allow overriding path if environment provides a system chrome
+    executablePath: process.env.CHROME_PATH || undefined,
+  };
+  logger.info('Launching puppeteer', { launchOptions: { headless: launchOptions.headless } });
+  return puppeteer.launch(launchOptions);
+}
 
-  const page = await browser.newPage();
-
+async function safeClick(page, selector, timeout = 5000) {
   try {
-    // Navigate to Layer3 quests
-    await page.goto("https://layer3.xyz/quests", { waitUntil: "networkidle2" });
-    logger.info("Navigated to Layer3 quests page");
-
-    // Example: simulate wallet connect
-    const connectButton = "button[data-testid='connect-wallet']";
-    if (await page.$(connectButton)) {
-      await page.click(connectButton);
-      logger.info("Clicked connect wallet button");
-      await page.waitForTimeout(3000);
-    } else {
-      logger.warn("Connect wallet button not found");
-    }
-
-    // Example: click on first quest
-    const questLink = "a[href*='/quest/']";
-    if (await page.$(questLink)) {
-      await page.click(questLink);
-      logger.info("Opened a quest");
-      await page.waitForTimeout(5000);
-    } else {
-      logger.warn("No quest link found");
-    }
-
-    // Simulate completing quest
-    logger.info("Quest completion simulated (replace with real logic)");
-
-    // Example: claim reward
-    const claimButton = "button[data-testid='claim-reward']";
-    if (await page.$(claimButton)) {
-      await page.click(claimButton);
-      logger.info("Clicked claim reward button");
-      await page.waitForTimeout(3000);
-    } else {
-      logger.warn("Claim reward button not found");
-    }
-
-    logger.info(`Layer3 quest automation finished for ${walletAddress}`);
+    await page.waitForSelector(selector, { timeout });
+    await page.click(selector);
+    return true;
   } catch (err) {
-    logger.error(`Layer3 quest automation failed: ${err.message}`);
-  } finally {
-    await browser.close();
+    logger.warn(`Selector not found or clickable: ${selector}`, err);
+    return false;
   }
 }
 
-module.exports = { runLayer3Quest };
+async function runGalxeQuest(walletAddress, opts = {}) {
+  logger.info('runGalxeQuest start', { walletAddress });
+  // placeholder: if you have a non-headless flow or API, prefer that
+  const browser = await launchBrowser();
+  const page = await browser.newPage();
+  try {
+    await page.goto('https://galxe.com', { waitUntil: 'networkidle2', timeout: 30000 });
+    // example flow: wait for connect button, click, etc.
+    const connectSelector = 'button[aria-label="Connect Wallet"], button.connect-wallet';
+    const connected = await safeClick(page, connectSelector, 7000);
+    if (!connected) {
+      logger.warn('Galxe connect button not found; skipping interactive flow');
+      await browser.close();
+      return { ok: false, reason: 'connect_selector_missing' };
+    }
+
+    // wait a bit for wallet popup or injected provider to settle
+    await page.waitForTimeout(1500);
+
+    // simulate completing a quest; real selectors must be validated against the live site
+    const claimSelector = '.claim-button, button.claim';
+    const claimed = await safeClick(page, claimSelector, 5000);
+    await page.waitForTimeout(1000);
+
+    await browser.close();
+    return { ok: true, claimed: !!claimed };
+  } catch (err) {
+    logger.error('Error in runGalxeQuest', err);
+    try { await browser.close(); } catch (e) {}
+    return { ok: false, error: String(err) };
+  }
+}
+
+async function runZealyQuest(walletAddress, opts = {}) {
+  logger.info('runZealyQuest start', { walletAddress });
+  // Zealy often has API or OAuth flows; this is a best-effort Puppeteer fallback
+  const browser = await launchBrowser();
+  const page = await browser.newPage();
+  try {
+    await page.goto('https://zealy.io', { waitUntil: 'networkidle2', timeout: 30000 });
+    // example selectors; replace with real ones for your flows
+    const connectSelector = 'button[aria-label="Connect Wallet"], button.connect-wallet';
+    await safeClick(page, connectSelector, 7000);
+    await page.waitForTimeout(1000);
+    // attempt to claim or mark task complete
+    const taskSelector = '.task-claim, button.claim';
+    const ok = await safeClick(page, taskSelector, 5000);
+    await browser.close();
+    return { ok: true, completed: !!ok };
+  } catch (err) {
+    logger.error('Error in runZealyQuest', err);
+    try { await browser.close(); } catch (e) {}
+    return { ok: false, error: String(err) };
+  }
+}
+
+async function runLayer3Quest(walletAddress, opts = {}) {
+  logger.info('runLayer3Quest start', { walletAddress });
+  // Layer3 flows can be automated similarly; keep defensive waits and retries
+  const browser = await launchBrowser();
+  const page = await browser.newPage();
+  try {
+    await page.goto('https://layer3.xyz', { waitUntil: 'networkidle2', timeout: 30000 });
+    const connectSelector = 'button[aria-label="Connect Wallet"], button.connect-wallet';
+    await safeClick(page, connectSelector, 7000);
+    await page.waitForTimeout(1000);
+    const actionSelector = '.action-button, button.action';
+    const ok = await safeClick(page, actionSelector, 5000);
+    await browser.close();
+    return { ok: true, acted: !!ok };
+  } catch (err) {
+    logger.error('Error in runLayer3Quest', err);
+    try { await browser.close(); } catch (e) {}
+    return { ok: false, error: String(err) };
+  }
+}
+
+module.exports = {
+  runGalxeQuest,
+  runZealyQuest,
+  runLayer3Quest
+};
