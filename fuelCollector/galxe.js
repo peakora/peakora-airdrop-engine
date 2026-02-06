@@ -1,7 +1,8 @@
-// fuelCollector/galxe.js
-// Full-featured Galxe adapter for the fuelCollector.
-// This module exposes a single function `runGalxe` that wraps the lower-level
-// quest automation and adds retries, timeouts, and structured logging.
+cat > fuelCollector/galxe.js <<'JS'
+/**
+ * fuelCollector/galxe.js
+ * Full-featured Galxe adapter for the fuelCollector.
+ */
 
 const logger = require("../logger/logger");
 const { runGalxeQuest } = require("./quests");
@@ -82,3 +83,4 @@ function promiseWithTimeout(promise, ms, timeoutMessage) {
 }
 
 module.exports = { runGalxe };
+JS
