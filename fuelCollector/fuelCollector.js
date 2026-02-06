@@ -1,63 +1,77 @@
 // fuelCollector/fuelCollector.js
-const logger = require('../logger/logger');
-const quests = require('./quests');
-const network = require('../network/network');
+const { runLayer3Quest } = require("./quests");
+const { runGalxeQuest } = require("./galxe");
+const { runZealyQuest } = require("./zealy");
+const logger = require("../logger/logger");
 
-async function resolveWalletAddress(walletKeyOrAddress) {
-  // Accept either a raw address or a key name that maps to an env var
+/**
+ * Resolve a wallet key or raw address to a 0x... address string.
+ * Accepts:
+ *  - raw address: "0xabc..."
+ *  - env key: "WALLET_KEY_1" -> looks up WALLET_KEY_1_ADDRESS or WALLET_KEY_1
+ */
+function resolveWalletAddress(walletKeyOrAddress) {
   if (!walletKeyOrAddress) return null;
-  if (walletKeyOrAddress.startsWith('0x') && walletKeyOrAddress.length === 42) {
+  // raw address passed
+  if (typeof walletKeyOrAddress === "string" && walletKeyOrAddress.startsWith("0x") && walletKeyOrAddress.length === 42) {
     return walletKeyOrAddress;
   }
-  // try env var named exactly, then KEY_ADDRESS
-  const fromEnv = process.env[walletKeyOrAddress] || process.env[`${walletKeyOrAddress}_ADDRESS`];
-  if (fromEnv && fromEnv.startsWith('0x')) return fromEnv;
+  // try exact env key, then KEY_ADDRESS
+  const direct = process.env[walletKeyOrAddress];
+  if (direct && direct.startsWith("0x")) return direct;
+  const alt = process.env[`${walletKeyOrAddress}_ADDRESS`];
+  if (alt && alt.startsWith("0x")) return alt;
   return null;
 }
 
-async function collectRewards(walletKeyOrAddress, opts = {}) {
-  const walletAddress = await resolveWalletAddress(walletKeyOrAddress);
-  if (!walletAddress) {
-    logger.warn(`No wallet address found for "${walletKeyOrAddress}". Aborting collection.`);
-    return { ok: false, reason: 'no_wallet_address' };
-  }
-
-  logger.info(`Starting fuel collection for ${walletAddress}`);
-
+/**
+ * Collect rewards from supported quest platforms
+ * @param {string} walletKeyOrAddress - The environment variable key for the wallet or a raw address
+ */
+async function collectRewards(walletKeyOrAddress) {
   try {
-    // ensure network is reachable
-    await network.ensureReady();
+    const walletAddress = resolveWalletAddress(walletKeyOrAddress);
+    if (!walletAddress) {
+      logger.error(`No wallet address found for key/address: ${walletKeyOrAddress}`);
+      return { ok: false, reason: "no_wallet_address" };
+    }
 
-    // run each quest provider in sequence; each returns {ok, details}
-    const results = {};
-    results.galxe = await quests.runGalxeQuest(walletAddress, opts).catch(err => {
-      logger.error('Galxe quest failed', err);
+    // helpful debug log so you can confirm the resolved address in logs
+    logger.info(`Starting reward collection for wallet: ${walletAddress}`);
+    console.log(`collectRewards: resolved walletAddress = ${walletAddress}`);
+
+    // Run Layer3 quest automation
+    const layer3Result = await runLayer3Quest(walletAddress).catch(err => {
+      logger.error("runLayer3Quest error", err);
       return { ok: false, error: String(err) };
     });
 
-    results.zealy = await quests.runZealyQuest(walletAddress, opts).catch(err => {
-      logger.error('Zealy quest failed', err);
+    // Run Galxe quest automation
+    const galxeResult = await runGalxeQuest(walletAddress).catch(err => {
+      logger.error("runGalxeQuest error", err);
       return { ok: false, error: String(err) };
     });
 
-    results.layer3 = await quests.runLayer3Quest(walletAddress, opts).catch(err => {
-      logger.error('Layer3 quest failed', err);
+    // Run Zealy quest automation
+    const zealyResult = await runZealyQuest(walletAddress).catch(err => {
+      logger.error("runZealyQuest error", err);
       return { ok: false, error: String(err) };
     });
 
-    logger.info('Fuel collection finished', { wallet: walletAddress, results });
+    const results = { layer3: layer3Result, galxe: galxeResult, zealy: zealyResult };
+    logger.info(`Reward collection finished for wallet: ${walletAddress}`, { results });
     return { ok: true, wallet: walletAddress, results };
   } catch (err) {
-    logger.error('Unexpected error in collectRewards', err);
+    logger.error(`Reward collection failed: ${err && err.message ? err.message : String(err)}`);
     return { ok: false, error: String(err) };
   }
 }
 
 // CLI / test runner support
 if (require.main === module) {
-  const arg = process.argv[2] || 'WALLET_KEY_1';
+  const arg = process.argv[2] || "WALLET_KEY_1";
   (async () => {
-    const out = await collectRewards(arg, { test: true });
+    const out = await collectRewards(arg);
     console.log(JSON.stringify(out, null, 2));
     process.exit(0);
   })();
