@@ -1,7 +1,8 @@
-// fuelCollector/zealy.js
-// Full-featured Zealy adapter for the fuelCollector.
-// This module exposes `runZealy` which wraps the quest automation with
-// retries, optional dry-run, and structured logging.
+cat > fuelCollector/zealy.js <<'JS'
+/**
+ * fuelCollector/zealy.js
+ * Full-featured Zealy adapter for the fuelCollector.
+ */
 
 const logger = require("../logger/logger");
 const { runZealyQuest } = require("./quests");
@@ -79,3 +80,4 @@ function promiseWithTimeout(promise, ms, timeoutMessage) {
 }
 
 module.exports = { runZealy };
+JS
