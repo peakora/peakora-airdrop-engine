@@ -1,69 +1,81 @@
-const puppeteer = require("puppeteer");
+// fuelCollector/zealy.js
+// Full-featured Zealy adapter for the fuelCollector.
+// This module exposes `runZealy` which wraps the quest automation with
+// retries, optional dry-run, and structured logging.
+
 const logger = require("../logger/logger");
+const { runZealyQuest } = require("./quests");
 
 /**
- * Automates Zealy quest flow:
- * - Opens Zealy site
- * - Connects wallet (simulated)
- * - Opens a community quest
- * - Completes task (placeholder)
- * - Claims reward (points/tokens)
+ * Run Zealy collection with retries and optional dry-run.
+ * @param {string} walletAddress - 0x... address to use
+ * @param {object} opts - options: { retries, retryDelayMs, timeoutMs, dryRun }
+ * @returns {Promise<object>} result object { ok, completed, attempts, error }
  */
-async function runZealyQuest(walletAddress) {
-  logger.info(`Starting Zealy quest automation for ${walletAddress}`);
+async function runZealy(walletAddress, opts = {}) {
+  const retries = Number(opts.retries ?? 2);
+  const retryDelayMs = Number(opts.retryDelayMs ?? 2000);
+  const timeoutMs = Number(opts.timeoutMs ?? 60_000);
+  const dryRun = !!opts.dryRun;
 
-  const browser = await puppeteer.launch({
-    headless: true, // set to false if you want to see the browser
-    defaultViewport: null,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"]
-  });
-
-  const page = await browser.newPage();
-
-  try {
-    // Navigate to Zealy quests
-    await page.goto("https://zealy.io/", { waitUntil: "networkidle2" });
-    logger.info("Navigated to Zealy homepage");
-
-    // Example: simulate wallet connect
-    const connectButton = "button[data-testid='connect-wallet']";
-    if (await page.$(connectButton)) {
-      await page.click(connectButton);
-      logger.info("Clicked connect wallet button");
-      await page.waitForTimeout(3000);
-    } else {
-      logger.warn("Connect wallet button not found");
-    }
-
-    // Example: click on first quest
-    const questLink = "a[href*='/quest/']";
-    if (await page.$(questLink)) {
-      await page.click(questLink);
-      logger.info("Opened a Zealy quest");
-      await page.waitForTimeout(5000);
-    } else {
-      logger.warn("No quest link found");
-    }
-
-    // Simulate completing quest
-    logger.info("Zealy quest completion simulated (replace with real logic)");
-
-    // Example: claim reward
-    const claimButton = "button[data-testid='claim-reward']";
-    if (await page.$(claimButton)) {
-      await page.click(claimButton);
-      logger.info("Clicked claim reward button");
-      await page.waitForTimeout(3000);
-    } else {
-      logger.warn("Claim reward button not found");
-    }
-
-    logger.info(`Zealy quest automation finished for ${walletAddress}`);
-  } catch (err) {
-    logger.error(`Zealy quest automation failed: ${err.message}`);
-  } finally {
-    await browser.close();
+  if (!walletAddress || typeof walletAddress !== "string" || !walletAddress.startsWith("0x")) {
+    const err = new Error("Invalid walletAddress passed to runZealy");
+    logger.error(err.message, { walletAddress });
+    return { ok: false, error: err.message };
   }
+
+  logger.info("runZealy: starting", { wallet: walletAddress, retries, dryRun });
+
+  if (dryRun) {
+    logger.info("runZealy: dryRun enabled — skipping browser automation");
+    return { ok: true, completed: false, dryRun: true };
+  }
+
+  let attempt = 0;
+  let lastError = null;
+
+  while (attempt <= retries) {
+    attempt += 1;
+    logger.info("runZealy: attempt", { attempt, wallet: walletAddress });
+
+    try {
+      const resultPromise = runZealyQuest(walletAddress, { attempt });
+      const result = await promiseWithTimeout(resultPromise, timeoutMs, `Zealy attempt ${attempt} timed out`);
+      if (result && result.ok) {
+        logger.info("runZealy: success", { wallet: walletAddress, attempt, result });
+        return { ok: true, completed: !!result.completed, attempts: attempt, details: result };
+      }
+      lastError = result && result.error ? result.error : "unknown_failure";
+      logger.warn("runZealy: attempt returned non-ok", { attempt, lastError });
+    } catch (err) {
+      lastError = err && err.message ? err.message : String(err);
+      logger.error("runZealy: attempt threw", { attempt, error: lastError });
+    }
+
+    if (attempt <= retries) {
+      logger.info("runZealy: retrying after delay", { attempt, delayMs: retryDelayMs });
+      await sleep(retryDelayMs);
+    }
+  }
+
+  logger.error("runZealy: all attempts failed", { wallet: walletAddress, attempts: attempt, lastError });
+  return { ok: false, error: lastError, attempts: attempt };
 }
 
-module.exports = { runZealyQuest };
+/* Helpers */
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function promiseWithTimeout(promise, ms, timeoutMessage) {
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(timeoutMessage)), ms);
+    })
+  ]).finally(() => clearTimeout(timer));
+}
+
+module.exports = { runZealy };
