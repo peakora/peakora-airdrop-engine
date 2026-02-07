@@ -5,14 +5,12 @@
 // - Safe guard: browser only launches when RUN_BROWSER=true.
 // - Replace TODO blocks with real automation logic.
 
-const logger = require("../logger/logger"); // reuse project logger if present
+const logger = require("../logger/logger");
 
 let puppeteer = null;
-try { puppeteer = require("puppeteer"); } catch (e) { /* puppeteer optional until RUN_BROWSER=true */ }
+try { puppeteer = require("puppeteer"); } catch (e) { /* optional until RUN_BROWSER=true */ }
 
-/* -------------------------
-   Utilities and guards
-   ------------------------- */
+/* Utilities and guards */
 
 function attachPagePolyfills(page) {
   try {
@@ -26,7 +24,6 @@ function attachPagePolyfills(page) {
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function launchBrowser(ctx = {}) {
-  // Safety guard: do not launch browser unless explicitly enabled
   if (process.env.RUN_BROWSER !== "true") {
     throw new Error("Browser launch disabled. Set RUN_BROWSER=true to enable real browser runs.");
   }
@@ -39,9 +36,7 @@ async function launchBrowser(ctx = {}) {
   return await puppeteer.launch(opts);
 }
 
-/* -------------------------
-   Small helpers used by implementations
-   ------------------------- */
+/* Small helpers */
 
 async function safeClick(page, selector, timeout = 5000) {
   try {
@@ -54,32 +49,23 @@ async function safeClick(page, selector, timeout = 5000) {
   }
 }
 
-/* -------------------------
-   Layer3 implementation placeholder
-   Replace the TODO block with the real automation steps.
-   Implementations should accept (walletAddress, ctx) where ctx.attachPagePolyfills(page) is available.
-   ------------------------- */
-
+/* Layer3 placeholder
+   Replace TODO block with the real Layer3 automation steps.
+*/
 async function runLayer3Quest(walletAddress, ctx = {}) {
   logger.info("runLayer3Quest start", { walletAddress });
-  // If you want to run real browser automation, set RUN_BROWSER=true and ensure puppeteer is installed
+  if (process.env.RUN_BROWSER !== "true") {
+    logger.info("runLayer3Quest dry-run mode (no browser).");
+    return { ok: true, note: "dry-run: layer3 skipped" };
+  }
   try {
-    // Example: guard so this function can be used in dry runs without launching Chromium
-    if (process.env.RUN_BROWSER !== "true") {
-      logger.info("runLayer3Quest dry-run mode (no browser).");
-      return { ok: true, note: "dry-run: layer3 skipped" };
-    }
-
     const browser = await launchBrowser(ctx);
     const page = await browser.newPage();
     attachPagePolyfills(page);
-
     try {
-      // TODO: Replace the following placeholder steps with the real Layer3 automation
+      // TODO: implement Layer3 automation here
       await page.goto("https://layer3.xyz", { waitUntil: "networkidle2" });
-      // Example selectors (replace with real ones)
-      // await safeClick(page, 'button.connect-wallet', 8000);
-      // await safeClick(page, '.action-button', 5000);
+      // Example: await safeClick(page, 'button.connect-wallet', 8000);
       await sleep(300);
       await browser.close();
       return { ok: true, note: "layer3 placeholder completed" };
@@ -94,11 +80,9 @@ async function runLayer3Quest(walletAddress, ctx = {}) {
   }
 }
 
-/* -------------------------
-   Galxe implementation placeholder
-   Replace the TODO block with the real automation steps.
-   ------------------------- */
-
+/* Galxe placeholder
+   Replace TODO block with the real Galxe automation steps.
+*/
 async function runGalxeQuest(walletAddress, ctx = {}) {
   logger.info("runGalxeQuest start", { walletAddress });
   if (process.env.RUN_BROWSER !== "true") {
@@ -126,11 +110,9 @@ async function runGalxeQuest(walletAddress, ctx = {}) {
   }
 }
 
-/* -------------------------
-   Zealy implementation placeholder
-   Replace the TODO block with the real automation steps.
-   ------------------------- */
-
+/* Zealy placeholder
+   Replace TODO block with the real Zealy automation steps.
+*/
 async function runZealyQuest(walletAddress, ctx = {}) {
   logger.info("runZealyQuest start", { walletAddress });
   if (process.env.RUN_BROWSER !== "true") {
@@ -158,9 +140,7 @@ async function runZealyQuest(walletAddress, ctx = {}) {
   }
 }
 
-/* -------------------------
-   Orchestrator
-   ------------------------- */
+/* Orchestrator */
 
 function resolveWalletAddress(walletKeyOrAddress) {
   if (!walletKeyOrAddress) return null;
@@ -194,9 +174,7 @@ async function collectRewards(walletKeyOrAddress) {
   }
 }
 
-/* -------------------------
-   CLI runner and exports
-   ------------------------- */
+/* CLI runner and exports */
 
 if (require.main === module) {
   const arg = process.argv[2] || "WALLET_KEY_1";
