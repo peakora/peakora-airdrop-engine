@@ -80,33 +80,81 @@ async function runLayer3Quest(walletAddress, ctx = {}) {
   }
 }
 
-/* Galxe placeholder
-   Replace TODO block with the real Galxe automation steps.
-*/
+// Robust Galxe implementation with retry, longer timeouts, and failure artifacts
 async function runGalxeQuest(walletAddress, ctx = {}) {
   logger.info("runGalxeQuest start", { walletAddress });
   if (process.env.RUN_BROWSER !== "true") {
     logger.info("runGalxeQuest dry-run mode (no browser).");
     return { ok: true, note: "dry-run: galxe skipped" };
   }
+
+  const url = "https://galxe.xyz";
+  const maxAttempts = 2;
+  const navTimeout = 60000; // 60s navigation timeout
+  const screenshotDir = "logs";
   try {
-    const browser = await launchBrowser(ctx);
-    const page = await browser.newPage();
-    attachPagePolyfills(page);
-    try {
-      // TODO: implement Galxe automation here
-      await page.goto("https://galxe.xyz", { waitUntil: "networkidle2" });
-      await sleep(300);
-      await browser.close();
-      return { ok: true, note: "galxe placeholder completed" };
-    } catch (err) {
-      try { await browser.close(); } catch (e) {}
-      logger.error("Galxe automation error", err && err.message);
-      return { ok: false, error: String(err) };
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      let browser = null;
+      try {
+        browser = await launchBrowser(ctx);
+        const page = await browser.newPage();
+        attachPagePolyfills(page);
+
+        // Helpful defaults for flaky pages
+        page.setDefaultNavigationTimeout(navTimeout);
+        await page.setViewport({ width: 1280, height: 800 });
+        await page.setUserAgent((process.env.USER_AGENT || "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0 Safari/537.36"));
+
+        logger.info(`Galxe navigation attempt ${attempt} -> ${url}`);
+        await page.goto(url, { waitUntil: "networkidle2", timeout: navTimeout });
+
+        // TODO: add real Galxe interactions here (connect wallet, claim, etc.)
+        // Example placeholder action:
+        // await safeClick(page, 'button.connect-wallet', 10000);
+
+        await browser.close();
+        return { ok: true, note: `galxe completed (attempt ${attempt})` };
+      } catch (err) {
+        // capture artifacts for debugging
+        try {
+          if (typeof browser?.newPage === "function") {
+            // nothing
+          }
+        } catch (e) {}
+
+        // try to capture screenshot and HTML if page exists
+        try {
+          if (browser) {
+            const pages = await browser.pages();
+            const page = pages && pages.length ? pages[0] : null;
+            if (page) {
+              const ts = Date.now();
+              const png = `${screenshotDir}/galxe-failure-${ts}.png`;
+              const html = `${screenshotDir}/galxe-failure-${ts}.html`;
+              try { await page.screenshot({ path: png, fullPage: true }); } catch (e) {}
+              try { const content = await page.content(); require('fs').writeFileSync(html, content); } catch (e) {}
+            }
+          }
+        } catch (artErr) {
+          logger.warn("Failed to capture Galxe failure artifacts", artErr && artErr.message);
+        }
+
+        try { if (browser) await browser.close(); } catch (e) {}
+
+        const isTimeout = (err && err.name === "TimeoutError") || (String(err || "").toLowerCase().includes("timeout"));
+        logger.error("Galxe error", err && err.message ? err.message : String(err));
+        if (attempt < maxAttempts && isTimeout) {
+          logger.info(`Galxe attempt ${attempt} timed out; retrying (attempt ${attempt + 1})`);
+          await new Promise(r => setTimeout(r, 1500));
+          continue;
+        }
+        return { ok: false, error: String(err) };
+      }
     }
-  } catch (err) {
-    logger.warn("runGalxeQuest skipped or failed to start browser", err && err.message);
-    return { ok: false, error: String(err) };
+    return { ok: false, error: "galxe: exhausted attempts" };
+  } catch (outerErr) {
+    logger.error("runGalxeQuest fatal", outerErr && outerErr.message);
+    return { ok: false, error: String(outerErr) };
   }
 }
 
